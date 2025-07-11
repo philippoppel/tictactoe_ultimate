@@ -313,6 +313,12 @@
     let boardWinners = Array(9).fill(null);
     let gameWon = false;
 
+    const winPatterns = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+        [0, 4, 8], [2, 4, 6]             // diagonals
+    ];
+
     function generateGameCode() {
         return Math.random().toString(36).substring(2, 8).toUpperCase();
     }
@@ -413,10 +419,11 @@
         document.getElementById('resetButton').classList.remove('hidden');
         document.getElementById('backButton').classList.remove('hidden');
 
-        document.getElementById('playerSymbol').textContent = 'X';
+        document.getElementById('playerSymbol').textContent = 'X (Du)';
         document.getElementById('playerSymbol').style.color = '#3498db';
 
         mySymbol = 'X';
+        opponentSymbol = 'O';
         isMyTurn = true;
 
         initGame();
@@ -428,11 +435,11 @@
             if (isMyTurn) {
                 boardHint.style.color = '#27ae60';
                 if (activeBoard === null) {
-                    boardHint.textContent = 'Dein Zug! Du kannst in einem beliebigen freien Feld spielen';
+                    boardHint.textContent = 'Dein Zug! Du kannst in einem beliebigen freien Feld spielen.';
                 } else {
                     const row = Math.floor(activeBoard / 3) + 1;
                     const col = (activeBoard % 3) + 1;
-                    boardHint.textContent = `Dein Zug! Du musst im Feld (Zeile ${row}, Spalte ${col}) spielen`;
+                    boardHint.textContent = `Dein Zug! Du musst im Feld (Zeile ${row}, Spalte ${col}) spielen.`;
                 }
             } else {
                 boardHint.style.color = '#e74c3c';
@@ -466,7 +473,7 @@
             smallBoard.appendChild(smallGrid);
             gameBoard.appendChild(smallBoard);
         }
-
+        updateActiveBoards();
         if (gameMode === 'online') {
             updateTurnIndicator();
         } else {
@@ -480,15 +487,9 @@
 
         if (gameMode === 'online') {
             if (!isMyTurn || currentPlayer !== mySymbol) return;
-
-            // Sende den Zug an den Gegner
-            conn.send({
-                type: 'move',
-                boardIndex: boardIndex,
-                cellIndex: cellIndex
-            });
+            conn.send({ type: 'move', boardIndex, cellIndex });
         } else if (gameMode === 'computer') {
-            if (currentPlayer === 'O') return;
+            if (currentPlayer !== mySymbol) return;
         }
 
         executeMove(boardIndex, cellIndex);
@@ -505,7 +506,7 @@
         cell.classList.add(currentPlayer);
         cell.disabled = true;
 
-        if (checkSmallBoardWin(boardIndex)) {
+        if (checkSmallBoardWin(boardIndex, currentPlayer)) {
             boardWinners[boardIndex] = currentPlayer;
             const smallBoard = document.getElementById(`board-${boardIndex}`);
             smallBoard.classList.add(`won-${currentPlayer}`);
@@ -515,18 +516,17 @@
             winnerSymbol.textContent = currentPlayer;
             winnerSymbol.style.color = currentPlayer === 'X' ? '#3498db' : '#e74c3c';
             smallBoard.appendChild(winnerSymbol);
-
             disableSmallBoard(boardIndex);
-        }
 
-        if (checkUltimateWin()) {
-            gameWon = true;
-            const winnerText = gameMode === 'online'
-                ? (currentPlayer === mySymbol ? 'Du hast gewonnen! 🎉' : 'Dein Gegner hat gewonnen!')
-                : `Spieler ${currentPlayer} hat gewonnen!`;
-            document.getElementById('winnerMessage').textContent = winnerText;
-            disableAllBoards();
-            return;
+            if (checkUltimateWin(currentPlayer)) {
+                gameWon = true;
+                const winnerText = gameMode === 'online'
+                    ? (currentPlayer === mySymbol ? 'Du hast gewonnen! 🎉' : 'Dein Gegner hat gewonnen!')
+                    : (currentPlayer === mySymbol ? 'Du hast gewonnen! 🎉' : 'Der Computer hat gewonnen!');
+                document.getElementById('winnerMessage').textContent = winnerText;
+                disableAllBoards();
+                return;
+            }
         }
 
         if (checkDraw()) {
@@ -538,119 +538,264 @@
         currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
         document.getElementById('currentPlayer').textContent = currentPlayer;
 
-        activeBoard = boardWinners[cellIndex] ? null : cellIndex;
+        activeBoard = boardWinners[cellIndex] !== null || isBoardFull(cellIndex) ? null : cellIndex;
+
         updateActiveBoards();
 
         if (gameMode === 'online') {
             isMyTurn = !isMyTurn;
             updateTurnIndicator();
         } else {
+            isMyTurn = !isMyTurn;
             updateBoardHint();
-            if (currentPlayer === 'O' && !gameWon) {
-                setTimeout(makeComputerMove, 500);
+            if (!isMyTurn && !gameWon) {
+                // Deaktiviere das Board während der Computer nachdenkt
+                document.getElementById('ultimateBoard').style.pointerEvents = 'none';
+                setTimeout(() => {
+                    makeComputerMove();
+                    // Aktiviere das Board wieder
+                    document.getElementById('ultimateBoard').style.pointerEvents = 'auto';
+                }, 500);
             }
         }
     }
 
+    // #####################################################################
+    // ####################### NEUE COMPUTER-KI LOGIK ######################
+    // #####################################################################
+
     function makeComputerMove() {
-        const availableMoves = [];
+        if (gameWon) return;
+
+        // Schwierigkeitsgrad basierend auf der Suchtiefe
+        const searchDepth = 4; // Höher = Stärker, aber langsamer. 4 ist ein guter Kompromiss.
+
+        let bestMove = { score: -Infinity, move: null };
+
+        // 1. Hole alle möglichen Züge
+        const availableMoves = getAvailableMoves();
+
+        // 2. Falls keine Züge möglich sind (sehr unwahrscheinlich), abbrechen.
+        if (availableMoves.length === 0) return;
+
+        // 3. Wenn nur ein Zug möglich ist, nimm ihn.
+        if (availableMoves.length === 1) {
+            bestMove.move = availableMoves[0];
+        } else {
+            // 4. Finde den besten Zug mit dem Minimax-Algorithmus
+            for (const move of availableMoves) {
+                // Simuliere den Zug
+                boards[move.boardIndex][move.cellIndex] = opponentSymbol;
+                const tempWinner = checkSmallBoardWin(move.boardIndex, opponentSymbol) ? opponentSymbol : null;
+                const oldWinner = boardWinners[move.boardIndex];
+                boardWinners[move.boardIndex] = tempWinner;
+
+                // Rufe Minimax für den nächsten Zustand auf (jetzt ist der menschliche Spieler dran)
+                const score = minimax(searchDepth, false, -Infinity, Infinity);
+
+                // Mache die Simulation rückgängig
+                boards[move.boardIndex][move.cellIndex] = '';
+                boardWinners[move.boardIndex] = oldWinner;
+
+                // Wenn der gefundene Zug besser ist als der bisher beste, speichere ihn
+                if (score > bestMove.score) {
+                    bestMove.score = score;
+                    bestMove.move = move;
+                }
+            }
+        }
+
+        // 5. Wenn kein guter Zug gefunden wurde (z.B. alle führen zum Verlust), wähle einen zufälligen.
+        if (!bestMove.move) {
+            bestMove.move = availableMoves[Math.floor(Math.random() * availableMoves.length)];
+        }
+
+        // 6. Führe den besten Zug aus
+        executeMove(bestMove.move.boardIndex, bestMove.move.cellIndex);
+    }
+
+    function minimax(depth, isMaximizing, alpha, beta) {
+        // Bewertungs-Logik, wenn die maximale Tiefe erreicht ist oder das Spiel endet
+        const score = evaluateBoard();
+        if (score === 1000 || score === -1000 || depth === 0 || gameWon) {
+            return score;
+        }
+
+        const moves = getAvailableMoves();
+
+        if (isMaximizing) { // Computer (möchte Score maximieren)
+            let maxEval = -Infinity;
+            for (const move of moves) {
+                // Simuliere Zug
+                boards[move.boardIndex][move.cellIndex] = opponentSymbol;
+                const oldWinner = boardWinners[move.boardIndex];
+                boardWinners[move.boardIndex] = checkSmallBoardWin(move.boardIndex, opponentSymbol) ? opponentSymbol : null;
+
+                const evaluation = minimax(depth - 1, false, alpha, beta);
+
+                // Mache Simulation rückgängig
+                boards[move.boardIndex][move.cellIndex] = '';
+                boardWinners[move.boardIndex] = oldWinner;
+
+                maxEval = Math.max(maxEval, evaluation);
+                alpha = Math.max(alpha, evaluation);
+                if (beta <= alpha) { // Alpha-Beta Pruning
+                    break;
+                }
+            }
+            return maxEval;
+        } else { // Menschlicher Spieler (möchte Score minimieren)
+            let minEval = Infinity;
+            for (const move of moves) {
+                // Simuliere Zug
+                boards[move.boardIndex][move.cellIndex] = mySymbol;
+                const oldWinner = boardWinners[move.boardIndex];
+                boardWinners[move.boardIndex] = checkSmallBoardWin(move.boardIndex, mySymbol) ? mySymbol : null;
+
+                const evaluation = minimax(depth - 1, true, alpha, beta);
+
+                // Mache Simulation rückgängig
+                boards[move.boardIndex][move.cellIndex] = '';
+                boardWinners[move.boardIndex] = oldWinner;
+
+                minEval = Math.min(minEval, evaluation);
+                beta = Math.min(beta, evaluation);
+                if (beta <= alpha) { // Alpha-Beta Pruning
+                    break;
+                }
+            }
+            return minEval;
+        }
+    }
+
+    function evaluateBoard() {
+        // Bewerte den Gesamtsieg
+        if (checkUltimateWin(opponentSymbol)) return 1000; // KI gewinnt
+        if (checkUltimateWin(mySymbol)) return -1000;     // Spieler gewinnt
+
+        let totalScore = 0;
+        // Bewerte die gewonnenen kleinen Bretter
+        for (let i = 0; i < 9; i++) {
+            if (boardWinners[i] === opponentSymbol) totalScore += 40; // KI gewinnt kleines Brett
+            if (boardWinners[i] === mySymbol) totalScore -= 40;     // Spieler gewinnt kleines Brett
+        }
+
+        // Bewerte die Positionen auf den einzelnen Brettern
+        for (let i = 0; i < 9; i++) {
+            totalScore += evaluateSmallBoard(i);
+        }
+
+        return totalScore;
+    }
+
+    function evaluateSmallBoard(boardIndex) {
+        let score = 0;
+        const board = boards[boardIndex];
+
+        // Funktion, um Linien (2 von 3) zu bewerten
+        const evaluateLine = (a, b, c) => {
+            let ai_pieces = 0;
+            let player_pieces = 0;
+            if (board[a] === opponentSymbol) ai_pieces++;
+            else if (board[a] === mySymbol) player_pieces++;
+            if (board[b] === opponentSymbol) ai_pieces++;
+            else if (board[b] === mySymbol) player_pieces++;
+            if (board[c] === opponentSymbol) ai_pieces++;
+            else if (board[c] === mySymbol) player_pieces++;
+
+            if (ai_pieces === 2 && player_pieces === 0) return 5; // Gute Position für KI
+            if (player_pieces === 2 && ai_pieces === 0) return -5; // Gute Position für Spieler
+            return 0;
+        };
+
+        for (const pattern of winPatterns) {
+            score += evaluateLine(pattern[0], pattern[1], pattern[2]);
+        }
+        return score;
+    }
+
+    function getAvailableMoves() {
+        const moves = [];
+        if (gameWon) return moves;
 
         for (let boardIndex = 0; boardIndex < 9; boardIndex++) {
             if (boardWinners[boardIndex]) continue;
+            // Wenn ein Board aktiv ist, aber nicht dieses, überspringe es
             if (activeBoard !== null && activeBoard !== boardIndex) continue;
 
             for (let cellIndex = 0; cellIndex < 9; cellIndex++) {
                 if (!boards[boardIndex][cellIndex]) {
-                    availableMoves.push({boardIndex, cellIndex});
+                    moves.push({ boardIndex, cellIndex });
                 }
             }
         }
-
-        if (availableMoves.length === 0) return;
-
-        let bestMove = null;
-
-        for (const move of availableMoves) {
-            boards[move.boardIndex][move.cellIndex] = 'O';
-            if (checkSmallBoardWin(move.boardIndex)) {
-                bestMove = move;
-                boards[move.boardIndex][move.cellIndex] = '';
-                break;
-            }
-            boards[move.boardIndex][move.cellIndex] = '';
-
-            boards[move.boardIndex][move.cellIndex] = 'X';
-            if (checkSmallBoardWin(move.boardIndex)) {
-                bestMove = move;
-                boards[move.boardIndex][move.cellIndex] = '';
-                break;
-            }
-            boards[move.boardIndex][move.cellIndex] = '';
-        }
-
-        if (!bestMove) {
-            bestMove = availableMoves[Math.floor(Math.random() * availableMoves.length)];
-        }
-
-        executeMove(bestMove.boardIndex, bestMove.cellIndex);
+        return moves;
     }
 
-    function checkSmallBoardWin(boardIndex) {
+    // ####################### ENDE DER NEUEN KI-LOGIK #####################
+    // #####################################################################
+
+
+    function checkSmallBoardWin(boardIndex, player) {
         const board = boards[boardIndex];
-        const winPatterns = [
-            [0, 1, 2], [3, 4, 5], [6, 7, 8],
-            [0, 3, 6], [1, 4, 7], [2, 5, 8],
-            [0, 4, 8], [2, 4, 6]
-        ];
-
         return winPatterns.some(pattern =>
-            board[pattern[0]] &&
-            board[pattern[0]] === board[pattern[1]] &&
-            board[pattern[1]] === board[pattern[2]]
+            pattern.every(index => board[index] === player)
         );
     }
 
-    function checkUltimateWin() {
-        const winPatterns = [
-            [0, 1, 2], [3, 4, 5], [6, 7, 8],
-            [0, 3, 6], [1, 4, 7], [2, 5, 8],
-            [0, 4, 8], [2, 4, 6]
-        ];
-
+    function checkUltimateWin(player) {
         return winPatterns.some(pattern =>
-            boardWinners[pattern[0]] &&
-            boardWinners[pattern[0]] === boardWinners[pattern[1]] &&
-            boardWinners[pattern[1]] === boardWinners[pattern[2]]
+            pattern.every(index => boardWinners[index] === player)
         );
+    }
+
+    function isBoardFull(boardIndex) {
+        return boards[boardIndex].every(cell => cell !== '');
     }
 
     function checkDraw() {
-        return boardWinners.every(winner => winner !== null) ||
-            boards.every((board, index) =>
-                boardWinners[index] || board.every(cell => cell !== '')
-            );
+        // Unentschieden, wenn alle Bretter entweder gewonnen oder voll sind
+        for(let i = 0; i < 9; i++) {
+            if (boardWinners[i] === null && !isBoardFull(i)) {
+                return false; // Es gibt noch spielbare Felder
+            }
+        }
+        // Wenn die Schleife durchläuft, sind alle Bretter entschieden
+        return !checkUltimateWin('X') && !checkUltimateWin('O');
     }
 
     function updateActiveBoards() {
         document.querySelectorAll('.small-board').forEach((board, index) => {
-            if (activeBoard === null || activeBoard === index) {
-                if (!boardWinners[index]) {
-                    board.classList.add('active');
-                }
-            } else {
-                board.classList.remove('active');
+            board.classList.remove('active');
+            // Ein Board ist spielbar, wenn es nicht bereits gewonnen ist UND
+            // (entweder kein spezielles Board aktiv ist ODER es das aktive Board ist)
+            if (!boardWinners[index] && (activeBoard === null || activeBoard === index)) {
+                board.classList.add('active');
             }
         });
     }
 
     function updateBoardHint() {
         const hint = document.getElementById('boardHint');
-        if (activeBoard === null) {
-            hint.textContent = 'Du kannst in einem beliebigen freien Feld spielen';
-        } else {
-            const row = Math.floor(activeBoard / 3) + 1;
-            const col = (activeBoard % 3) + 1;
-            hint.textContent = `Du musst im Feld (Zeile ${row}, Spalte ${col}) spielen`;
+        if (gameWon) {
+            hint.textContent = '';
+            return;
+        }
+
+        if (gameMode === 'computer') {
+            if (isMyTurn) {
+                hint.style.color = '#27ae60';
+                if (activeBoard === null) {
+                    hint.textContent = 'Dein Zug! Du kannst in einem beliebigen freien Feld spielen.';
+                } else {
+                    const row = Math.floor(activeBoard / 3) + 1;
+                    const col = (activeBoard % 3) + 1;
+                    hint.textContent = `Dein Zug! Du musst im Feld (Zeile ${row}, Spalte ${col}) spielen.`;
+                }
+            } else {
+                hint.style.color = '#e74c3c';
+                hint.textContent = 'Der Computer denkt nach...';
+            }
         }
     }
 
@@ -665,6 +810,7 @@
         for (let i = 0; i < 9; i++) {
             disableSmallBoard(i);
         }
+        document.querySelectorAll('.small-board').forEach(b => b.classList.remove('active'));
     }
 
     function resetGame() {
@@ -678,7 +824,11 @@
         boardWinners = Array(9).fill(null);
         gameWon = false;
 
-        if (gameMode === 'online') {
+        if (gameMode === 'computer') {
+            mySymbol = 'X';
+            opponentSymbol = 'O';
+            isMyTurn = true;
+        } else if (gameMode === 'online') {
             isMyTurn = mySymbol === 'X';
         }
 
@@ -725,8 +875,8 @@
         document.getElementById('joinCode').value = '';
     }
 
-    // Initialisiere das Spiel
-    initGame();
+    // Initialisiere das UI beim ersten Laden
+    document.getElementById('gameBoard').innerHTML = 'Wähle einen Spielmodus, um zu starten.';
 </script>
 </body>
 </html>
