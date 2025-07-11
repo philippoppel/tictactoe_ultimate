@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Tic Tac Toe - Online</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #1a1a2e;
+            color: #eee;
+        }
+
+        .game-container {
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #f39c12;
+            margin-bottom: 10px;
+        }
+
+        .connection-panel {
+            background-color: #0f3460;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .connection-panel h2 {
+            margin-top: 0;
+            color: #f39c12;
+        }
+
+        .connection-input {
+            padding: 10px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background-color: #16213e;
+            color: #eee;
+            font-size: 16px;
+        }
+
+        .connection-button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background-color: #3498db;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .connection-button:hover {
+            background-color: #2980b9;
+            transform: scale(1.05);
+        }
+
+        .connection-button.host {
+            background-color: #27ae60;
+        }
+
+        .connection-button.host:hover {
+            background-color: #229954;
+        }
+
+        .game-code {
+            font-size: 24px;
+            font-weight: bold;
+            color: #f39c12;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #16213e;
+            border-radius: 5px;
+        }
+
+        .status {
+            margin: 10px 0;
+            font-size: 18px;
+        }
+
+        .status.connected {
+            color: #27ae60;
+        }
+
+        .status.waiting {
+            color: #f39c12;
+        }
+
+        .info {
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        .current-player {
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .ultimate-board {
+            display: inline-block;
+            background-color: #0f3460;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            opacity: 0.3;
+            transition: opacity 0.3s ease;
+        }
+
+        .ultimate-board.active {
+            opacity: 1;
+        }
+
+        .big-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .small-board {
+            background-color: #16213e;
+            padding: 5px;
+            border-radius: 5px;
+            border: 3px solid #16213e;
+            transition: all 0.3s ease;
+        }
+
+        .small-board.active {
+            border-color: #f39c12;
+            box-shadow: 0 0 10px #f39c12;
+        }
+
+        .small-board.won-X {
+            background-color: rgba(52, 152, 219, 0.3);
+        }
+
+        .small-board.won-O {
+            background-color: rgba(231, 76, 60, 0.3);
+        }
+
+        .small-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 3px;
+        }
+
+        .cell {
+            width: 40px;
+            height: 40px;
+            background-color: #0f3460;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: bold;
+            color: #eee;
+            transition: all 0.2s ease;
+        }
+
+        .cell:hover:not(:disabled) {
+            background-color: #1e5490;
+            transform: scale(1.1);
+        }
+
+        .cell:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .cell.X {
+            color: #3498db;
+        }
+
+        .cell.O {
+            color: #e74c3c;
+        }
+
+        .winner-message {
+            margin-top: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #f39c12;
+        }
+
+        .reset-button {
+            margin-top: 20px;
+            padding: 10px 30px;
+            font-size: 18px;
+            background-color: #f39c12;
+            color: #1a1a2e;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .reset-button:hover {
+            background-color: #e67e22;
+            transform: scale(1.05);
+        }
+
+        .board-winner {
+            position: absolute;
+            font-size: 80px;
+            font-weight: bold;
+            opacity: 0.8;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            top: 50%;
+            left: 50%;
+        }
+
+        .small-board {
+            position: relative;
+        }
+
+        .mode-selector {
+            margin: 20px 0;
+        }
+
+        .mode-button {
+            padding: 15px 30px;
+            margin: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .mode-button.computer {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .mode-button.computer:hover {
+            background-color: #c0392b;
+            transform: scale(1.05);
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <h1>Ultimate Tic Tac Toe - Online</h1>
+
+    <div id="modeSelector" class="mode-selector">
+        <h2>Wähle einen Spielmodus:</h2>
+        <button class="mode-button host" onclick="showHostPanel()">Online-Spiel erstellen</button>
+        <button class="mode-button connection-button" onclick="showJoinPanel()">Online-Spiel beitreten</button>
+        <button class="mode-button computer" onclick="startComputerGame()">Gegen Computer spielen</button>
+    </div>
+
+    <div id="connectionPanel" class="connection-panel hidden">
+        <h2 id="connectionTitle">Verbindung</h2>
+
+        <div id="hostSection" class="hidden">
+            <p>Teile diesen Code mit deinem Freund:</p>
+            <div class="game-code" id="gameCode">Wird generiert...</div>
+            <div class="status waiting">Warte auf Mitspieler...</div>
+        </div>
+
+        <div id="joinSection" class="hidden">
+            <p>Gib den Spiel-Code ein:</p>
+            <input type="text" id="joinCode" class="connection-input" placeholder="Spiel-Code eingeben">
+            <br>
+            <button class="connection-button" onclick="joinGame()">Spiel beitreten</button>
+        </div>
+
+        <div id="connectionStatus" class="status"></div>
+    </div>
+
+    <div class="info hidden" id="gameInfo">
+        <div>Du spielst als: <span id="playerSymbol" style="font-weight: bold;"></span></div>
+        <div>Aktueller Spieler: <span class="current-player" id="currentPlayer">X</span></div>
+        <div id="boardHint"></div>
+    </div>
+
+    <div class="ultimate-board" id="ultimateBoard">
+        <div class="big-grid" id="gameBoard"></div>
+    </div>
+
+    <div id="winnerMessage" class="winner-message"></div>
+    <button class="reset-button hidden" id="resetButton" onclick="resetGame()">Neues Spiel</button>
+    <button class="reset-button hidden" id="backButton" onclick="backToMenu()">Zurück zum Menü</button>
+</div>
+
+<script>
+    let peer = null;
+    let conn = null;
+    let isHost = false;
+    let mySymbol = '';
+    let opponentSymbol = '';
+    let isMyTurn = false;
+    let gameMode = ''; // 'online' oder 'computer'
+
+    let currentPlayer = 'X';
+    let activeBoard = null;
+    let boards = Array(9).fill(null).map(() => Array(9).fill(''));
+    let boardWinners = Array(9).fill(null);
+    let gameWon = false;
+
+    function generateGameCode() {
+        return Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+
+    function showHostPanel() {
+        gameMode = 'online';
+        document.getElementById('modeSelector').classList.add('hidden');
+        document.getElementById('connectionPanel').classList.remove('hidden');
+        document.getElementById('hostSection').classList.remove('hidden');
+        document.getElementById('connectionTitle').textContent = 'Spiel erstellen';
+
+        const gameCode = generateGameCode();
+        peer = new Peer(gameCode);
+
+        peer.on('open', (id) => {
+            document.getElementById('gameCode').textContent = id;
+            console.log('Game code:', id);
+        });
+
+        peer.on('connection', (connection) => {
+            conn = connection;
+            setupConnection();
+            isHost = true;
+            mySymbol = 'X';
+            opponentSymbol = 'O';
+            isMyTurn = true;
+        });
+    }
+
+    function showJoinPanel() {
+        gameMode = 'online';
+        document.getElementById('modeSelector').classList.add('hidden');
+        document.getElementById('connectionPanel').classList.remove('hidden');
+        document.getElementById('joinSection').classList.remove('hidden');
+        document.getElementById('connectionTitle').textContent = 'Spiel beitreten';
+    }
+
+    function joinGame() {
+        const code = document.getElementById('joinCode').value.toUpperCase();
+        if (!code) {
+            alert('Bitte gib einen Spiel-Code ein!');
+            return;
+        }
+
+        peer = new Peer();
+
+        peer.on('open', () => {
+            conn = peer.connect(code);
+            setupConnection();
+            isHost = false;
+            mySymbol = 'O';
+            opponentSymbol = 'X';
+            isMyTurn = false;
+        });
+    }
+
+    function setupConnection() {
+        conn.on('open', () => {
+            document.getElementById('connectionStatus').textContent = 'Verbunden!';
+            document.getElementById('connectionStatus').classList.add('connected');
+            startOnlineGame();
+        });
+
+        conn.on('data', (data) => {
+            if (data.type === 'move') {
+                receiveMove(data.boardIndex, data.cellIndex);
+            } else if (data.type === 'reset') {
+                resetGame();
+            }
+        });
+
+        conn.on('close', () => {
+            document.getElementById('connectionStatus').textContent = 'Verbindung getrennt!';
+            document.getElementById('connectionStatus').classList.remove('connected');
+            alert('Die Verbindung wurde getrennt!');
+        });
+    }
+
+    function startOnlineGame() {
+        document.getElementById('connectionPanel').classList.add('hidden');
+        document.getElementById('gameInfo').classList.remove('hidden');
+        document.getElementById('ultimateBoard').classList.add('active');
+        document.getElementById('resetButton').classList.remove('hidden');
+        document.getElementById('backButton').classList.remove('hidden');
+
+        document.getElementById('playerSymbol').textContent = mySymbol;
+        document.getElementById('playerSymbol').style.color = mySymbol === 'X' ? '#3498db' : '#e74c3c';
+
+        initGame();
+        updateTurnIndicator();
+    }
+
+    function startComputerGame() {
+        gameMode = 'computer';
+        document.getElementById('modeSelector').classList.add('hidden');
+        document.getElementById('gameInfo').classList.remove('hidden');
+        document.getElementById('ultimateBoard').classList.add('active');
+        document.getElementById('resetButton').classList.remove('hidden');
+        document.getElementById('backButton').classList.remove('hidden');
+
+        document.getElementById('playerSymbol').textContent = 'X';
+        document.getElementById('playerSymbol').style.color = '#3498db';
+
+        mySymbol = 'X';
+        isMyTurn = true;
+
+        initGame();
+    }
+
+    function updateTurnIndicator() {
+        if (gameMode === 'online') {
+            const boardHint = document.getElementById('boardHint');
+            if (isMyTurn) {
+                boardHint.style.color = '#27ae60';
+                if (activeBoard === null) {
+                    boardHint.textContent = 'Dein Zug! Du kannst in einem beliebigen freien Feld spielen';
+                } else {
+                    const row = Math.floor(activeBoard / 3) + 1;
+                    const col = (activeBoard % 3) + 1;
+                    boardHint.textContent = `Dein Zug! Du musst im Feld (Zeile ${row}, Spalte ${col}) spielen`;
+                }
+            } else {
+                boardHint.style.color = '#e74c3c';
+                boardHint.textContent = 'Warte auf den Zug deines Gegners...';
+            }
+        } else {
+            updateBoardHint();
+        }
+    }
+
+    function initGame() {
+        const gameBoard = document.getElementById('gameBoard');
+        gameBoard.innerHTML = '';
+
+        for (let boardIndex = 0; boardIndex < 9; boardIndex++) {
+            const smallBoard = document.createElement('div');
+            smallBoard.className = 'small-board';
+            smallBoard.id = `board-${boardIndex}`;
+
+            const smallGrid = document.createElement('div');
+            smallGrid.className = 'small-grid';
+
+            for (let cellIndex = 0; cellIndex < 9; cellIndex++) {
+                const cell = document.createElement('button');
+                cell.className = 'cell';
+                cell.onclick = () => makeMove(boardIndex, cellIndex);
+                cell.id = `cell-${boardIndex}-${cellIndex}`;
+                smallGrid.appendChild(cell);
+            }
+
+            smallBoard.appendChild(smallGrid);
+            gameBoard.appendChild(smallBoard);
+        }
+
+        if (gameMode === 'online') {
+            updateTurnIndicator();
+        } else {
+            updateBoardHint();
+        }
+    }
+
+    function makeMove(boardIndex, cellIndex) {
+        if (gameWon || boards[boardIndex][cellIndex] || boardWinners[boardIndex]) return;
+        if (activeBoard !== null && activeBoard !== boardIndex) return;
+
+        if (gameMode === 'online') {
+            if (!isMyTurn || currentPlayer !== mySymbol) return;
+
+            // Sende den Zug an den Gegner
+            conn.send({
+                type: 'move',
+                boardIndex: boardIndex,
+                cellIndex: cellIndex
+            });
+        } else if (gameMode === 'computer') {
+            if (currentPlayer === 'O') return;
+        }
+
+        executeMove(boardIndex, cellIndex);
+    }
+
+    function receiveMove(boardIndex, cellIndex) {
+        executeMove(boardIndex, cellIndex);
+    }
+
+    function executeMove(boardIndex, cellIndex) {
+        boards[boardIndex][cellIndex] = currentPlayer;
+        const cell = document.getElementById(`cell-${boardIndex}-${cellIndex}`);
+        cell.textContent = currentPlayer;
+        cell.classList.add(currentPlayer);
+        cell.disabled = true;
+
+        if (checkSmallBoardWin(boardIndex)) {
+            boardWinners[boardIndex] = currentPlayer;
+            const smallBoard = document.getElementById(`board-${boardIndex}`);
+            smallBoard.classList.add(`won-${currentPlayer}`);
+
+            const winnerSymbol = document.createElement('div');
+            winnerSymbol.className = 'board-winner';
+            winnerSymbol.textContent = currentPlayer;
+            winnerSymbol.style.color = currentPlayer === 'X' ? '#3498db' : '#e74c3c';
+            smallBoard.appendChild(winnerSymbol);
+
+            disableSmallBoard(boardIndex);
+        }
+
+        if (checkUltimateWin()) {
+            gameWon = true;
+            const winnerText = gameMode === 'online'
+                ? (currentPlayer === mySymbol ? 'Du hast gewonnen! 🎉' : 'Dein Gegner hat gewonnen!')
+                : `Spieler ${currentPlayer} hat gewonnen!`;
+            document.getElementById('winnerMessage').textContent = winnerText;
+            disableAllBoards();
+            return;
+        }
+
+        if (checkDraw()) {
+            gameWon = true;
+            document.getElementById('winnerMessage').textContent = 'Unentschieden!';
+            return;
+        }
+
+        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+        document.getElementById('currentPlayer').textContent = currentPlayer;
+
+        activeBoard = boardWinners[cellIndex] ? null : cellIndex;
+        updateActiveBoards();
+
+        if (gameMode === 'online') {
+            isMyTurn = !isMyTurn;
+            updateTurnIndicator();
+        } else {
+            updateBoardHint();
+            if (currentPlayer === 'O' && !gameWon) {
+                setTimeout(makeComputerMove, 500);
+            }
+        }
+    }
+
+    function makeComputerMove() {
+        const availableMoves = [];
+
+        for (let boardIndex = 0; boardIndex < 9; boardIndex++) {
+            if (boardWinners[boardIndex]) continue;
+            if (activeBoard !== null && activeBoard !== boardIndex) continue;
+
+            for (let cellIndex = 0; cellIndex < 9; cellIndex++) {
+                if (!boards[boardIndex][cellIndex]) {
+                    availableMoves.push({boardIndex, cellIndex});
+                }
+            }
+        }
+
+        if (availableMoves.length === 0) return;
+
+        let bestMove = null;
+
+        for (const move of availableMoves) {
+            boards[move.boardIndex][move.cellIndex] = 'O';
+            if (checkSmallBoardWin(move.boardIndex)) {
+                bestMove = move;
+                boards[move.boardIndex][move.cellIndex] = '';
+                break;
+            }
+            boards[move.boardIndex][move.cellIndex] = '';
+
+            boards[move.boardIndex][move.cellIndex] = 'X';
+            if (checkSmallBoardWin(move.boardIndex)) {
+                bestMove = move;
+                boards[move.boardIndex][move.cellIndex] = '';
+                break;
+            }
+            boards[move.boardIndex][move.cellIndex] = '';
+        }
+
+        if (!bestMove) {
+            bestMove = availableMoves[Math.floor(Math.random() * availableMoves.length)];
+        }
+
+        executeMove(bestMove.boardIndex, bestMove.cellIndex);
+    }
+
+    function checkSmallBoardWin(boardIndex) {
+        const board = boards[boardIndex];
+        const winPatterns = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+
+        return winPatterns.some(pattern =>
+            board[pattern[0]] &&
+            board[pattern[0]] === board[pattern[1]] &&
+            board[pattern[1]] === board[pattern[2]]
+        );
+    }
+
+    function checkUltimateWin() {
+        const winPatterns = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+
+        return winPatterns.some(pattern =>
+            boardWinners[pattern[0]] &&
+            boardWinners[pattern[0]] === boardWinners[pattern[1]] &&
+            boardWinners[pattern[1]] === boardWinners[pattern[2]]
+        );
+    }
+
+    function checkDraw() {
+        return boardWinners.every(winner => winner !== null) ||
+            boards.every((board, index) =>
+                boardWinners[index] || board.every(cell => cell !== '')
+            );
+    }
+
+    function updateActiveBoards() {
+        document.querySelectorAll('.small-board').forEach((board, index) => {
+            if (activeBoard === null || activeBoard === index) {
+                if (!boardWinners[index]) {
+                    board.classList.add('active');
+                }
+            } else {
+                board.classList.remove('active');
+            }
+        });
+    }
+
+    function updateBoardHint() {
+        const hint = document.getElementById('boardHint');
+        if (activeBoard === null) {
+            hint.textContent = 'Du kannst in einem beliebigen freien Feld spielen';
+        } else {
+            const row = Math.floor(activeBoard / 3) + 1;
+            const col = (activeBoard % 3) + 1;
+            hint.textContent = `Du musst im Feld (Zeile ${row}, Spalte ${col}) spielen`;
+        }
+    }
+
+    function disableSmallBoard(boardIndex) {
+        for (let i = 0; i < 9; i++) {
+            const cell = document.getElementById(`cell-${boardIndex}-${i}`);
+            cell.disabled = true;
+        }
+    }
+
+    function disableAllBoards() {
+        for (let i = 0; i < 9; i++) {
+            disableSmallBoard(i);
+        }
+    }
+
+    function resetGame() {
+        if (gameMode === 'online' && conn) {
+            conn.send({ type: 'reset' });
+        }
+
+        currentPlayer = 'X';
+        activeBoard = null;
+        boards = Array(9).fill(null).map(() => Array(9).fill(''));
+        boardWinners = Array(9).fill(null);
+        gameWon = false;
+
+        if (gameMode === 'online') {
+            isMyTurn = mySymbol === 'X';
+        }
+
+        document.getElementById('currentPlayer').textContent = currentPlayer;
+        document.getElementById('winnerMessage').textContent = '';
+
+        initGame();
+    }
+
+    function backToMenu() {
+        if (peer) {
+            peer.destroy();
+            peer = null;
+        }
+        if (conn) {
+            conn.close();
+            conn = null;
+        }
+
+        // Reset alles
+        currentPlayer = 'X';
+        activeBoard = null;
+        boards = Array(9).fill(null).map(() => Array(9).fill(''));
+        boardWinners = Array(9).fill(null);
+        gameWon = false;
+        isHost = false;
+        mySymbol = '';
+        opponentSymbol = '';
+        isMyTurn = false;
+        gameMode = '';
+
+        // UI zurücksetzen
+        document.getElementById('modeSelector').classList.remove('hidden');
+        document.getElementById('connectionPanel').classList.add('hidden');
+        document.getElementById('hostSection').classList.add('hidden');
+        document.getElementById('joinSection').classList.add('hidden');
+        document.getElementById('gameInfo').classList.add('hidden');
+        document.getElementById('ultimateBoard').classList.remove('active');
+        document.getElementById('resetButton').classList.add('hidden');
+        document.getElementById('backButton').classList.add('hidden');
+        document.getElementById('winnerMessage').textContent = '';
+        document.getElementById('connectionStatus').textContent = '';
+        document.getElementById('connectionStatus').classList.remove('connected');
+        document.getElementById('joinCode').value = '';
+    }
+
+    // Initialisiere das Spiel
+    initGame();
+</script>
+</body>
+</html>
