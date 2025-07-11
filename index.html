@@ -2,118 +2,207 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultimate Tic Tac Toe - Unbeatable AI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ultimate Tic Tac Toe - Mobile Edition</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
-            background-color: #1a1a2e;
-            color: #eee;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
         }
 
         .game-container {
-            text-align: center;
-            padding: 20px;
+            max-width: 100vw;
+            min-height: 100vh;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         h1 {
-            color: #f39c12;
-            margin-bottom: 10px;
+            font-size: 1.5rem;
+            margin: 10px 0;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .mode-selector {
+            width: 100%;
+            max-width: 400px;
+            margin: 20px 0;
+        }
+
+        .mode-button {
+            width: 100%;
+            padding: 20px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mode-button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .mode-button:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .mode-button.host {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .mode-button.join {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .mode-button.computer {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: #333;
         }
 
         .connection-panel {
-            background-color: #0f3460;
+            width: 100%;
+            max-width: 400px;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
             padding: 20px;
-            border-radius: 10px;
+            border-radius: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
         }
 
         .connection-panel h2 {
             margin-top: 0;
-            color: #f39c12;
+            font-size: 1.3rem;
         }
 
         .connection-input {
-            padding: 10px;
-            margin: 5px;
-            border: none;
-            border-radius: 5px;
-            background-color: #16213e;
-            color: #eee;
-            font-size: 16px;
-        }
-
-        .connection-button {
-            padding: 10px 20px;
-            margin: 5px;
-            border: none;
-            border-radius: 5px;
-            background-color: #3498db;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 15px;
+            background: rgba(255,255,255,0.1);
             color: white;
-            font-size: 16px;
-            cursor: pointer;
+            font-size: 1.1rem;
             transition: all 0.3s ease;
         }
 
-        .connection-button:hover {
-            background-color: #2980b9;
-            transform: scale(1.05);
+        .connection-input:focus {
+            outline: none;
+            border-color: rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.2);
         }
 
-        .connection-button.host {
-            background-color: #27ae60;
+        .connection-input::placeholder {
+            color: rgba(255,255,255,0.6);
         }
 
-        .connection-button.host:hover {
-            background-color: #229954;
+        .connection-button {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
         .game-code {
-            font-size: 24px;
+            font-size: 2rem;
             font-weight: bold;
-            color: #f39c12;
-            margin: 10px 0;
-            padding: 10px;
-            background-color: #16213e;
-            border-radius: 5px;
+            text-align: center;
+            padding: 20px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            margin: 15px 0;
+            letter-spacing: 2px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
         .status {
-            margin: 10px 0;
-            font-size: 18px;
+            text-align: center;
+            margin: 15px 0;
+            font-size: 1.1rem;
+            font-weight: 500;
         }
 
         .status.connected {
-            color: #27ae60;
+            color: #4ade80;
         }
 
         .status.waiting {
-            color: #f39c12;
+            color: #fbbf24;
         }
 
         .info {
-            margin-bottom: 20px;
-            font-size: 18px;
+            width: 100%;
+            max-width: 400px;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
-        .current-player {
-            color: #3498db;
-            font-weight: bold;
+        .info div {
+            margin: 5px 0;
+            font-size: 1rem;
         }
 
         .ultimate-board {
-            display: inline-block;
-            background-color: #0f3460;
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 1;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
             padding: 10px;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
             opacity: 0.3;
             transition: opacity 0.3s ease;
         }
@@ -125,51 +214,74 @@
         .big-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
+            gap: 8px;
+            height: 100%;
         }
 
         .small-board {
-            background-color: #16213e;
-            padding: 5px;
-            border-radius: 5px;
-            border: 3px solid #16213e;
+            background: rgba(255,255,255,0.1);
+            padding: 4px;
+            border-radius: 10px;
+            border: 2px solid transparent;
             transition: all 0.3s ease;
+            position: relative;
         }
 
         .small-board.active {
-            border-color: #f39c12;
-            box-shadow: 0 0 10px #f39c12;
+            border-color: #fbbf24;
+            background: rgba(251,191,36,0.2);
+            box-shadow: 0 0 20px rgba(251,191,36,0.4);
         }
 
         .small-board.won-X {
-            background-color: rgba(52, 152, 219, 0.3);
+            background: rgba(96,165,250,0.3);
         }
 
         .small-board.won-O {
-            background-color: rgba(231, 76, 60, 0.3);
+            background: rgba(248,113,113,0.3);
         }
 
         .small-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 3px;
+            gap: 2px;
+            height: 100%;
         }
 
         .cell {
-            width: 40px;
-            height: 40px;
-            background-color: #0f3460;
+            aspect-ratio: 1;
+            background: rgba(255,255,255,0.1);
             border: none;
             cursor: pointer;
-            font-size: 20px;
+            font-size: 1.2rem;
             font-weight: bold;
-            color: #eee;
+            color: white;
             transition: all 0.2s ease;
+            border-radius: 5px;
+            position: relative;
+            overflow: hidden;
         }
 
-        .cell:hover:not(:disabled) {
-            background-color: #1e5490;
-            transform: scale(1.1);
+        .cell::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transition: width 0.4s, height 0.4s;
+        }
+
+        .cell:active::before {
+            width: 100px;
+            height: 100px;
+        }
+
+        .cell:active {
+            transform: scale(0.95);
         }
 
         .cell:disabled {
@@ -178,90 +290,134 @@
         }
 
         .cell.X {
-            color: #3498db;
+            color: #60a5fa;
+            text-shadow: 0 0 10px rgba(96,165,250,0.8);
         }
 
         .cell.O {
-            color: #e74c3c;
-        }
-
-        .winner-message {
-            margin-top: 20px;
-            font-size: 24px;
-            font-weight: bold;
-            color: #f39c12;
-        }
-
-        .reset-button {
-            margin-top: 20px;
-            padding: 10px 30px;
-            font-size: 18px;
-            background-color: #f39c12;
-            color: #1a1a2e;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .reset-button:hover {
-            background-color: #e67e22;
-            transform: scale(1.05);
+            color: #f87171;
+            text-shadow: 0 0 10px rgba(248,113,113,0.8);
         }
 
         .board-winner {
             position: absolute;
-            font-size: 80px;
+            font-size: 3rem;
             font-weight: bold;
-            opacity: 0.8;
+            opacity: 0.9;
             pointer-events: none;
             transform: translate(-50%, -50%);
             top: 50%;
             left: 50%;
+            animation: winnerPulse 1s ease-in-out infinite;
         }
 
-        .small-board {
-            position: relative;
+        @keyframes winnerPulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
         }
 
-        .mode-selector {
-            margin: 20px 0;
+        .winner-message {
+            margin-top: 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            animation: slideIn 0.5s ease-out;
         }
 
-        .mode-button {
-            padding: 15px 30px;
-            margin: 10px;
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .reset-button, .back-button {
+            flex: 1;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
             border: none;
-            border-radius: 5px;
-            font-size: 18px;
+            border-radius: 15px;
             cursor: pointer;
             transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
-        .mode-button.computer {
-            background-color: #e74c3c;
-            color: white;
-        }
-
-        .mode-button.computer:hover {
-            background-color: #c0392b;
-            transform: scale(1.05);
+        .reset-button:active, .back-button:active {
+            transform: scale(0.95);
         }
 
         .hidden {
-            display: none;
+            display: none !important;
+        }
+
+        /* Loading animation */
+        .thinking {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 380px) {
+            .cell {
+                font-size: 1rem;
+            }
+            .board-winner {
+                font-size: 2.5rem;
+            }
+        }
+
+        @media (max-height: 700px) {
+            h1 {
+                font-size: 1.3rem;
+                margin: 5px 0;
+            }
+            .game-container {
+                padding: 5px;
+            }
+            .info {
+                padding: 10px;
+            }
+            .ultimate-board {
+                padding: 8px;
+            }
         }
     </style>
 </head>
 <body>
 <div class="game-container">
-    <h1>Ultimate Tic Tac Toe - Unbeatable AI</h1>
+    <h1>Ultimate Tic Tac Toe</h1>
 
     <div id="modeSelector" class="mode-selector">
-        <h2>Wähle einen Spielmodus:</h2>
-        <button class="mode-button host" onclick="showHostPanel()">Online-Spiel erstellen</button>
-        <button class="mode-button connection-button" onclick="showJoinPanel()">Online-Spiel beitreten</button>
-        <button class="mode-button computer" onclick="startComputerGame()">Gegen UNBESIEGBARE KI spielen</button>
+        <h2 style="text-align: center; margin-bottom: 20px;">Wähle einen Spielmodus:</h2>
+        <button class="mode-button host" onclick="showHostPanel()">🎮 Online-Spiel erstellen</button>
+        <button class="mode-button join" onclick="showJoinPanel()">🔗 Online-Spiel beitreten</button>
+        <button class="mode-button computer" onclick="startComputerGame()">🤖 Gegen UNBESIEGBARE KI</button>
     </div>
 
     <div id="connectionPanel" class="connection-panel hidden">
@@ -275,8 +431,7 @@
 
         <div id="joinSection" class="hidden">
             <p>Gib den Spiel-Code ein:</p>
-            <input type="text" id="joinCode" class="connection-input" placeholder="Spiel-Code eingeben">
-            <br>
+            <input type="text" id="joinCode" class="connection-input" placeholder="Spiel-Code eingeben" autocomplete="off">
             <button class="connection-button" onclick="joinGame()">Spiel beitreten</button>
         </div>
 
@@ -294,8 +449,11 @@
     </div>
 
     <div id="winnerMessage" class="winner-message"></div>
-    <button class="reset-button hidden" id="resetButton" onclick="resetGame()">Neues Spiel</button>
-    <button class="reset-button hidden" id="backButton" onclick="backToMenu()">Zurück zum Menü</button>
+
+    <div class="button-group hidden" id="gameButtons">
+        <button class="reset-button" onclick="resetGame()">🔄 Neues Spiel</button>
+        <button class="back-button" onclick="backToMenu()">🏠 Hauptmenü</button>
+    </div>
 </div>
 
 <script>
@@ -305,7 +463,7 @@
     let mySymbol = '';
     let opponentSymbol = '';
     let isMyTurn = false;
-    let gameMode = ''; // 'online' oder 'computer'
+    let gameMode = '';
 
     let currentPlayer = 'X';
     let activeBoard = null;
@@ -314,9 +472,9 @@
     let gameWon = false;
 
     const winPatterns = [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-        [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
-        [0, 4, 8], [2, 4, 6]             // diagonals
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
     ];
 
     function generateGameCode() {
@@ -328,7 +486,7 @@
         document.getElementById('modeSelector').classList.add('hidden');
         document.getElementById('connectionPanel').classList.remove('hidden');
         document.getElementById('hostSection').classList.remove('hidden');
-        document.getElementById('connectionTitle').textContent = 'Spiel erstellen';
+        document.getElementById('connectionTitle').textContent = '🎮 Spiel erstellen';
 
         const gameCode = generateGameCode();
         peer = new Peer(gameCode);
@@ -353,7 +511,7 @@
         document.getElementById('modeSelector').classList.add('hidden');
         document.getElementById('connectionPanel').classList.remove('hidden');
         document.getElementById('joinSection').classList.remove('hidden');
-        document.getElementById('connectionTitle').textContent = 'Spiel beitreten';
+        document.getElementById('connectionTitle').textContent = '🔗 Spiel beitreten';
     }
 
     function joinGame() {
@@ -377,7 +535,7 @@
 
     function setupConnection() {
         conn.on('open', () => {
-            document.getElementById('connectionStatus').textContent = 'Verbunden!';
+            document.getElementById('connectionStatus').textContent = '✅ Verbunden!';
             document.getElementById('connectionStatus').classList.add('connected');
             startOnlineGame();
         });
@@ -391,7 +549,7 @@
         });
 
         conn.on('close', () => {
-            document.getElementById('connectionStatus').textContent = 'Verbindung getrennt!';
+            document.getElementById('connectionStatus').textContent = '❌ Verbindung getrennt!';
             document.getElementById('connectionStatus').classList.remove('connected');
             alert('Die Verbindung wurde getrennt!');
         });
@@ -401,11 +559,10 @@
         document.getElementById('connectionPanel').classList.add('hidden');
         document.getElementById('gameInfo').classList.remove('hidden');
         document.getElementById('ultimateBoard').classList.add('active');
-        document.getElementById('resetButton').classList.remove('hidden');
-        document.getElementById('backButton').classList.remove('hidden');
+        document.getElementById('gameButtons').classList.remove('hidden');
 
         document.getElementById('playerSymbol').textContent = mySymbol;
-        document.getElementById('playerSymbol').style.color = mySymbol === 'X' ? '#3498db' : '#e74c3c';
+        document.getElementById('playerSymbol').style.color = mySymbol === 'X' ? '#60a5fa' : '#f87171';
 
         initGame();
         updateTurnIndicator();
@@ -416,11 +573,10 @@
         document.getElementById('modeSelector').classList.add('hidden');
         document.getElementById('gameInfo').classList.remove('hidden');
         document.getElementById('ultimateBoard').classList.add('active');
-        document.getElementById('resetButton').classList.remove('hidden');
-        document.getElementById('backButton').classList.remove('hidden');
+        document.getElementById('gameButtons').classList.remove('hidden');
 
         document.getElementById('playerSymbol').textContent = 'X (Du)';
-        document.getElementById('playerSymbol').style.color = '#3498db';
+        document.getElementById('playerSymbol').style.color = '#60a5fa';
 
         mySymbol = 'X';
         opponentSymbol = 'O';
@@ -433,17 +589,17 @@
         if (gameMode === 'online') {
             const boardHint = document.getElementById('boardHint');
             if (isMyTurn) {
-                boardHint.style.color = '#27ae60';
+                boardHint.style.color = '#4ade80';
                 if (activeBoard === null) {
-                    boardHint.textContent = 'Dein Zug! Du kannst in einem beliebigen freien Feld spielen.';
+                    boardHint.textContent = '✅ Dein Zug! Wähle ein beliebiges freies Feld.';
                 } else {
                     const row = Math.floor(activeBoard / 3) + 1;
                     const col = (activeBoard % 3) + 1;
-                    boardHint.textContent = `Dein Zug! Du musst im Feld (Zeile ${row}, Spalte ${col}) spielen.`;
+                    boardHint.textContent = `✅ Dein Zug! Spiele in Feld (${row}, ${col}).`;
                 }
             } else {
-                boardHint.style.color = '#e74c3c';
-                boardHint.textContent = 'Warte auf den Zug deines Gegners...';
+                boardHint.style.color = '#fbbf24';
+                boardHint.innerHTML = '⏳ Warte auf deinen Gegner...';
             }
         } else {
             updateBoardHint();
@@ -514,15 +670,15 @@
             const winnerSymbol = document.createElement('div');
             winnerSymbol.className = 'board-winner';
             winnerSymbol.textContent = currentPlayer;
-            winnerSymbol.style.color = currentPlayer === 'X' ? '#3498db' : '#e74c3c';
+            winnerSymbol.style.color = currentPlayer === 'X' ? '#60a5fa' : '#f87171';
             smallBoard.appendChild(winnerSymbol);
             disableSmallBoard(boardIndex);
 
             if (checkUltimateWin(currentPlayer)) {
                 gameWon = true;
                 const winnerText = gameMode === 'online'
-                    ? (currentPlayer === mySymbol ? 'Du hast gewonnen! 🎉' : 'Dein Gegner hat gewonnen!')
-                    : (currentPlayer === mySymbol ? 'Du hast gewonnen! 🎉' : 'Der Computer hat gewonnen!');
+                    ? (currentPlayer === mySymbol ? '🎉 Du hast gewonnen! 🎉' : '😔 Dein Gegner hat gewonnen!')
+                    : (currentPlayer === mySymbol ? '🎉 Du hast gewonnen! 🎉' : '🤖 Die KI hat gewonnen!');
                 document.getElementById('winnerMessage').textContent = winnerText;
                 disableAllBoards();
                 return;
@@ -531,7 +687,7 @@
 
         if (checkDraw()) {
             gameWon = true;
-            document.getElementById('winnerMessage').textContent = 'Unentschieden!';
+            document.getElementById('winnerMessage').textContent = '🤝 Unentschieden!';
             return;
         }
 
@@ -553,23 +709,16 @@
                 setTimeout(() => {
                     makeComputerMove();
                     document.getElementById('ultimateBoard').style.pointerEvents = 'auto';
-                }, 100); // Kürzere Wartezeit, da Berechnung länger dauert
+                }, 300);
             }
         }
     }
 
-    // #####################################################################
-    // ################## UNBESIEGBARE COMPUTER-KI LOGIK ###################
-    // #####################################################################
-
+    // Computer AI Logic
     function makeComputerMove() {
         if (gameWon) return;
 
-        // --- ÄNDERUNG: SUCHTIEFE ERHÖHT ---
-        // Eine höhere Suchtiefe macht die KI exponentiell stärker (und langsamer).
-        // 6 ist für einen Menschen kaum noch zu schlagen.
         const searchDepth = 6;
-
         let bestMove = { score: -Infinity, move: null };
         const availableMoves = getAvailableMoves();
 
@@ -578,7 +727,6 @@
             bestMove.move = availableMoves[0];
         } else {
             for (const move of availableMoves) {
-                // Simuliere
                 boards[move.boardIndex][move.cellIndex] = opponentSymbol;
                 const oldWinner = boardWinners[move.boardIndex];
                 if (checkSmallBoardWin(move.boardIndex, opponentSymbol)) {
@@ -587,7 +735,6 @@
 
                 const score = minimax(searchDepth, false, -Infinity, Infinity, move);
 
-                // Mache rückgängig
                 boards[move.boardIndex][move.cellIndex] = '';
                 boardWinners[move.boardIndex] = oldWinner;
 
@@ -608,10 +755,9 @@
     function minimax(depth, isMaximizing, alpha, beta, lastMove) {
         const score = evaluateBoard();
         if (Math.abs(score) > 5000 || depth === 0 || gameWon) {
-            return score + depth; // Bonus für schnellere Siege
+            return score + depth;
         }
 
-        // Bestimme das nächste aktive Brett basierend auf dem letzten Zug
         const nextActiveBoard = (boardWinners[lastMove.cellIndex] !== null || isBoardFull(lastMove.cellIndex)) ? null : lastMove.cellIndex;
         const moves = getAvailableMoves(nextActiveBoard);
 
@@ -657,13 +803,10 @@
     }
 
     function evaluateBoard() {
-        // --- ÄNDERUNG: VERBESSERTE HEURISTIK ---
-        if (checkUltimateWin(opponentSymbol)) return 10000; // KI gewinnt
-        if (checkUltimateWin(mySymbol)) return -10000;     // Spieler gewinnt
+        if (checkUltimateWin(opponentSymbol)) return 10000;
+        if (checkUltimateWin(mySymbol)) return -10000;
 
         let totalScore = 0;
-
-        // Bewertung des Hauptbretts (wie ein normales Tic-Tac-Toe mit den Gewinnern der kleinen Bretter)
         totalScore += evaluateLine(boardWinners, opponentSymbol, mySymbol) * 150;
 
         for (let i = 0; i < 9; i++) {
@@ -694,21 +837,17 @@
         let score = 0;
         const board = boards[boardIndex];
 
-        // Starker Bonus/Malus für drohende Siege/Niederlagen auf diesem Brett
         score += evaluateLine(board, opponentSymbol, mySymbol) * 10;
 
-        // Bonus für die Mitte des kleinen Brettes
         if(board[4] === opponentSymbol) score += 4;
         else if(board[4] === mySymbol) score -= 4;
 
-        // Bonus für Ecken
         const corners = [0, 2, 6, 8];
         corners.forEach(corner => {
             if(board[corner] === opponentSymbol) score += 2;
             else if(board[corner] === mySymbol) score -= 2;
         });
 
-        // Wenn dieses Brett das mittlere Hauptbrett ist, sind alle Boni mehr wert
         if (boardIndex === 4) {
             return score * 1.5;
         }
@@ -726,7 +865,7 @@
                     moves.push({ boardIndex: currentActiveBoard, cellIndex });
                 }
             }
-        } else { // Wenn überall gespielt werden darf
+        } else {
             for (let boardIndex = 0; boardIndex < 9; boardIndex++) {
                 if (boardWinners[boardIndex]) continue;
                 for (let cellIndex = 0; cellIndex < 9; cellIndex++) {
@@ -738,10 +877,6 @@
         }
         return moves;
     }
-
-    // ####################### ENDE DER NEUEN KI-LOGIK #####################
-    // #####################################################################
-
 
     function checkSmallBoardWin(boardIndex, player) {
         const board = boards[boardIndex];
@@ -787,17 +922,17 @@
 
         if (gameMode === 'computer') {
             if (isMyTurn) {
-                hint.style.color = '#27ae60';
+                hint.style.color = '#4ade80';
                 if (activeBoard === null) {
-                    hint.textContent = 'Dein Zug! Du kannst in einem beliebigen freien Feld spielen.';
+                    hint.textContent = '✅ Dein Zug! Wähle ein beliebiges freies Feld.';
                 } else {
                     const row = Math.floor(activeBoard / 3) + 1;
                     const col = (activeBoard % 3) + 1;
-                    hint.textContent = `Dein Zug! Du musst im Feld (Zeile ${row}, Spalte ${col}) spielen.`;
+                    hint.textContent = `✅ Dein Zug! Spiele in Feld (${row}, ${col}).`;
                 }
             } else {
-                hint.style.color = '#e74c3c';
-                hint.textContent = 'Der Computer berechnet seinen optimalen Zug...';
+                hint.style.color = '#fbbf24';
+                hint.innerHTML = '🤖 KI denkt nach<span class="thinking"></span>';
             }
         }
     }
@@ -868,15 +1003,32 @@
         document.getElementById('joinSection').classList.add('hidden');
         document.getElementById('gameInfo').classList.add('hidden');
         document.getElementById('ultimateBoard').classList.remove('active');
-        document.getElementById('resetButton').classList.add('hidden');
-        document.getElementById('backButton').classList.add('hidden');
+        document.getElementById('gameButtons').classList.add('hidden');
         document.getElementById('winnerMessage').textContent = '';
         document.getElementById('connectionStatus').textContent = '';
         document.getElementById('connectionStatus').classList.remove('connected');
         document.getElementById('joinCode').value = '';
     }
 
-    document.getElementById('gameBoard').innerHTML = 'Wähle einen Spielmodus, um zu starten.';
+    // Initialisierung
+    document.getElementById('gameBoard').innerHTML = '📱 Wähle einen Spielmodus';
+
+    // Verhindere Zoom auf iOS beim Doppeltippen
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function (event) {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) {
+            event.preventDefault();
+        }
+        lastTouchEnd = now;
+    }, false);
+
+    // Verhindere Pull-to-Refresh
+    document.body.addEventListener('touchmove', function(e) {
+        if (e.target.closest('.ultimate-board')) {
+            e.preventDefault();
+        }
+    }, { passive: false });
 </script>
 </body>
 </html>
